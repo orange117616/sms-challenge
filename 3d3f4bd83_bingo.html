@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>マリオサンシャイン チャレンジ</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1a6bb5 0%, #0d3d6b 100%);
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 20px; color: #fff;
+    }
+    h1 { font-size: 1.8rem; text-align: center; margin-bottom: 6px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+    .subtitle { font-size: 0.85rem; opacity: 0.75; margin-bottom: 20px; text-align: center; }
+
+    /* ===== 選択画面 ===== */
+    #select-screen { width: 100%; max-width: 600px; }
+
+    .step-header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .step-label {
+      font-size: 0.8rem; opacity: 0.6; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px;
+    }
+    .step-count {
+      font-size: 1.4rem; font-weight: bold;
+    }
+    .step-progress-wrap {
+      background: rgba(255,255,255,0.15); border-radius: 20px; height: 8px; margin: 10px auto 0; max-width: 300px; overflow: hidden;
+    }
+    .step-progress-bar {
+      height: 100%; background: #f5a623; border-radius: 20px; transition: width 0.4s;
+    }
+
+    .group-card {
+      background: rgba(255,255,255,0.12); border-radius: 16px; padding: 20px;
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+    .group-question { font-size: 1rem; font-weight: bold; margin-bottom: 16px; text-align: center; opacity: 0.9; }
+
+    .options-list { display: flex; flex-direction: column; gap: 10px; }
+    .option-btn {
+      background: rgba(255,255,255,0.15);
+      border: 2px solid transparent; border-radius: 10px;
+      color: #fff; padding: 14px 16px; font-size: 0.88rem;
+      cursor: pointer; text-align: left; transition: all 0.15s; line-height: 1.4;
+      width: 100%;
+    }
+    .option-btn:hover { background: rgba(255,255,255,0.28); border-color: rgba(255,255,255,0.3); }
+    .option-btn.selected {
+      background: #f5a623; color: #1a1a1a; border-color: #fff; font-weight: bold;
+      cursor: default;
+    }
+    .option-btn.locked { opacity: 0.4; cursor: default; }
+
+    .share-area {
+      margin-top: 24px; text-align: center;
+    }
+    .share-area p { font-size: 0.8rem; opacity: 0.7; margin-bottom: 8px; }
+    .share-box-sm {
+      background: rgba(255,255,255,0.12); border-radius: 8px;
+      padding: 8px 12px; display: flex; align-items: center; gap: 8px;
+    }
+    .share-box-sm input { flex: 1; background: transparent; border: none; color: #fff; font-size: 0.8rem; outline: none; }
+    .copy-btn-sm { background: rgba(255,255,255,0.2); color: #fff; border: none; border-radius: 6px; padding: 5px 12px; font-size: 0.78rem; cursor: pointer; white-space: nowrap; }
+    .copy-btn-sm:hover { background: rgba(255,255,255,0.38); }
+
+    .start-area { text-align: center; margin-top: 24px; padding-bottom: 40px; }
+    .start-btn {
+      background: #f5a623; color: #1a1a1a; border: none; border-radius: 10px;
+      padding: 14px 48px; font-size: 1.1rem; font-weight: bold; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .start-btn:hover { background: #e6921a; transform: translateY(-2px); }
+
+    /* ===== プレイ画面 ===== */
+    #play-screen { display: none; width: 100%; max-width: 600px; flex-direction: column; align-items: center; }
+    .play-controls { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; justify-content: center; }
+    .ctrl-btn { background: rgba(255,255,255,0.15); color: #fff; border: none; border-radius: 8px; padding: 8px 18px; font-size: 0.85rem; cursor: pointer; }
+    .ctrl-btn:hover { background: rgba(255,255,255,0.28); }
+    .task-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
+    .task-cell { background: rgba(255,255,255,0.13); border-radius: 10px; padding: 14px 8px; text-align: center; font-size: 0.78rem; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; line-height: 1.4; min-height: 70px; display: flex; align-items: center; justify-content: center; }
+    .task-cell:hover { background: rgba(255,255,255,0.22); transform: scale(1.02); }
+    .task-cell.done { background: #f5a623; color: #1a1a1a; font-weight: bold; border-color: #fff; }
+    .goal-count { font-size: 1rem; margin: 0 0 8px; opacity: 0.85; }
+    .goal-progress { background: rgba(255,255,255,0.15); border-radius: 20px; height: 12px; width: 100%; margin-bottom: 14px; overflow: hidden; }
+    .goal-bar { height: 100%; background: #f5a623; border-radius: 20px; transition: width 0.4s; }
+    .goal-banner { font-size: 2rem; font-weight: bold; color: #f5a623; text-shadow: 0 0 20px rgba(245,166,35,0.8); margin: 10px 0; display: none; animation: pulse 1s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+
+    #loading { font-size: 1.1rem; opacity: 0.8; margin: 40px; text-align: center; display: none; }
+    #error-msg { color: #ff8888; margin: 8px; font-size: 0.9rem; text-align: center; min-height: 18px; }
+
+    .new-game-btn {
+      background: rgba(255,255,255,0.15); color: #fff; border: none; border-radius: 8px;
+      padding: 8px 18px; font-size: 0.85rem; cursor: pointer; margin-bottom: 14px;
+    }
+    .new-game-btn:hover { background: rgba(255,255,255,0.28); }
+  </style>
+</head>
+<body>
+  <h1>🌊 マリオサンシャイン チャレンジ</h1>
+  <p class="subtitle">15グループ × 各3択 → 全15個クリアでゴール！</p>
+
+  <div id="loading">処理中...</div>
+  <div id="error-msg"></div>
+
+  <!-- 選択画面 -->
+  <div id="select-screen" style="display:none;"></div>
+
+  <!-- プレイ画面 -->
+  <div id="play-screen">
+    <button class="new-game-btn" onclick="startNewGame()">🔀 新しいチャレンジを作る</button>
+    <button class="ctrl-btn" onclick="resetChecks()" style="margin-bottom:14px;">↩ チェックリセット</button>
+    <div class="goal-count" id="goal-count">0 / 15 完了</div>
+    <div class="goal-progress"><div class="goal-bar" id="goal-bar" style="width:0%"></div></div>
+    <div class="goal-banner" id="goal-banner">🎉 ゴール！おめでとう！ 🎉</div>
+    <div class="task-grid" id="task-grid"></div>
+  </div>
+
+  <script>
+  // ===== 全22グループデータ =====
+  const ALL_TASK_GROUPS = [
+    [
+      { name: "M Graffiti の青コイン 15 枚", jp: "M 字から青コイン 15 枚" },
+      { name: "フルーツレディ ブルーコイン 3枚", jp: "アルバイトの青コイン3枚" },
+      { name: "3 Red Coin Shines", jp: "赤コインのシャイン3枚" },
+      { name: "デルフィーノ ブルー コイン 12 枚", jp: "ドルピックタウンの青コイン 12 枚" },
+      { name: "Ricco Blue Coins 15枚", jp: "リコハーバーの青コイン15枚" },
+      { name: "ピアンタ 100 コイン シャイン", jp: "モンテのむらの 100 枚コイン" },
+      { name: "リンクされたブルーコイン 5 ペア", jp: "双子ラクガキの青コイン 5 ペア" },
+    ],
+    [
+      { name: "Pinna Blue Coins 12枚", jp: "ピンナパークの青コイン12枚" },
+      { name: "ジェラート ブルー コイン 15 枚", jp: "マンマビーチの青コイン 15 枚" },
+      { name: "Ricco Blue Coins 20枚", jp: "リコハーバーの青コイン20枚" },
+      { name: "ビアンコ ブルー コイン 16 枚", jp: "ビアンコヒルズの青コイン 16 枚" },
+      { name: "Ricco 100 Coin Shine", jp: "リコハーバーの100枚コイン" },
+      { name: "ボスエピソードから100コインシャイン", jp: "ボスエピソードから100コインシャイン" },
+      { name: "3レベル分のイエローコイン50枚", jp: "3レベル分のイエローコイン50枚" },
+    ],
+    [
+      { name: "4 Fruit Lady Blue Coins", jp: "アルバイトの青コイン4枚" },
+      { name: "Bianco 4 Hoverless", jp: "ビアンコ4 ホバー禁止" },
+      { name: "1 Bianco Hidden Shine", jp: "ビアンコヒルの隠しシャイン1枚" },
+      { name: "Ricco 3 Fluddles", jp: "リコ3ポンプ禁止" },
+      { name: "21 Blue Coins from M Graffiti", jp: "M字から青コイン21枚" },
+    ],
+    [
+      { name: "青い鳥の青コイン 5枚", jp: "青い鳥の青コイン5枚" },
+      { name: "デルフィーノ ブルー コイン 15 枚", jp: "ドルピックタウンの青コイン 15 枚" },
+      { name: "ロケットノズル 2 個のロック解除", jp: "ロケットノズル 2 つ解放" },
+      { name: "5 Bianco Shines", jp: "ビアンコヒルズのシャイン5枚" },
+      { name: "1 Ricco Hidden Shine", jp: "リコハーバーの隠しシャイン1枚" },
+      { name: "4 Gelato Shines", jp: "マンマビーチのシャイン4枚" },
+    ],
+    [
+      { name: "ボックスゲーム3", jp: "ボックスゲーム3" },
+      { name: "4 Red Coin Shines", jp: "赤コインのシャイン4枚" },
+      { name: "Pinna Blue Coins 16枚", jp: "ピンナパークの青コイン16枚" },
+      { name: "ジェラート ブルー コイン 20枚", jp: "マンマビーチの青コイン 20枚" },
+      { name: "2 Gelato Hidden Shines", jp: "マンマビーチの隠しシャイン2枚" },
+      { name: "ピアンタ 3 ダメージレス", jp: "モンテ3をノーダメージでクリア" },
+    ],
+    [
+      { name: "150 Coins from Delfino", jp: "ドルピックでコイン150枚" },
+      { name: "Ricco Blue Coins 24枚", jp: "リコハーバーの青コイン24枚" },
+      { name: "Gelato 100 Coin Shine", jp: "マンマビーチの100枚コイン" },
+      { name: "ビアンコ 100 コイン シャイン", jp: "ビアンコヒルズの 100 枚コイン" },
+      { name: "NPCブルーコイン7枚（ピアンタ6なし）", jp: "NPCブルーコイン7枚" },
+      { name: "4 つのノズルのロック解除", jp: "ノズル4つ解放" },
+    ],
+    [
+      { name: "12 Noki Blue Coins", jp: "マーレのいりえの青コイン12枚" },
+      { name: "ビアンコ ブルー コイン 20枚", jp: "ビアンコヒルズの青コイン 20枚" },
+      { name: "Bianco 5 Shine", jp: "ボスパックン撃破（ビアンコ5）" },
+      { name: "Sirena 100 Coin Shine", jp: "シレナビーチの100枚コイン" },
+      { name: "Wiggler Shine", jp: "ボスハナチャン撃破（マンマ３）" },
+      { name: "エピソード 2 から 100 枚コインの輝き", jp: "ヒミツ内部で100枚コインのシャイン取得" },
+      { name: "両方のゴールドバードが輝く", jp: "両方のゴールドバードが輝く" },
+    ],
+    [
+      { name: "4 Secret Shines", jp: "ヒミツステージのシャイン4枚" },
+      { name: "キャノンモールエピソードからの4つのシャイン", jp: "キャノンモールエピソードのシャイン4つ" },
+      { name: "4 Boss Shines", jp: "ボス4体撃破" },
+      { name: "1 Pinna Hidden Shine", jp: "ピンナパークの隠しシャイン1枚" },
+      { name: "秘密の100枚コインの輝き", jp: "秘密内部で100枚コインのシャイン取得" },
+      { name: "Pinna 100 Coin Shine", jp: "ピンナパークの100枚コイン" },
+    ],
+    [
+      { name: "Pinna 3 Hoverless", jp: "ピンナ 3 ホバー禁止" },
+      { name: "敵からの青コイン 6 枚", jp: "敵から青コイン 6 枚" },
+      { name: "4 Unique Boss Shines", jp: "ボス4種類撃破" },
+      { name: "4 Hidden Shines", jp: "隠しシャイン4枚" },
+      { name: "5 Red Coin Shines", jp: "赤コインのシャイン5枚" },
+      { name: "20 Lives", jp: "残機20" },
+      { name: "25 Lives", jp: "残機25" },
+    ],
+    [
+      { name: "40 Total Blue Coins", jp: "青コイン合計40枚" },
+      { name: "45 Total Blue Coins", jp: "青コイン合計45枚" },
+      { name: "50 Total Blue Coins", jp: "青コイン合計50枚" },
+      { name: "3つの世界からの15枚のブルーコイン", jp: "3ワールドから青コイン15枚" },
+      { name: "2レベル分のブルーコイン20枚", jp: "2レベル分の青コイン20枚" },
+    ],
+    [
+      { name: "敵から青いコイン5枚 (リッコなし)", jp: "敵から青コイン5枚 (リッコなし)" },
+      { name: "敵からの青コイン 7 枚", jp: "敵から青コイン 7 枚" },
+      { name: "リンクされたブルーコイン 8 ペア", jp: "双子ラクガキの青コイン 8 ペア" },
+      { name: "3 つのワールドでヨッシーに乗ろう", jp: "3ワールドでヨッシーに乗ろう" },
+      { name: "6 Delfino Shines", jp: "ドルピックタウンのシャイン6枚" },
+      { name: "シレナブルーコイン 12枚", jp: "シレナビーチの青コイン12枚" },
+      { name: "Pinna Blue Coins 25枚", jp: "ピンナパークの青コイン25枚" },
+    ],
+    [
+      { name: "5 Boss Shines", jp: "ボス5体撃破" },
+      { name: "5 Hidden Shines", jp: "隠しシャイン5枚" },
+      { name: "Noki Blue Coins 20枚", jp: "マーレのいりえの青コイン20枚" },
+      { name: "1 Sirena Hidden Shine", jp: "シレナビーチの隠しシャイン1枚" },
+      { name: "Ricco 6 Blooperless", jp: "リコ6イカなし" },
+      { name: "ピアンタのヨッシーに乗る", jp: "モンテのむらのヨッシーに乗る" },
+      { name: "ユニークな場所に配置された5つのボタン", jp: "ユニークな場所の5つのボタン" },
+    ],
+    [
+      { name: "6 Red Coin Shines", jp: "赤コインのシャイン6枚" },
+      { name: "2 Ricco Hidden Shines", jp: "リコハーバーの隠しシャイン2枚" },
+      { name: "1レベルから2つの隠されたシャイン（ジェラートなし）", jp: "1レベルから隠しシャイン2枚" },
+      { name: "6 Pianta Shines", jp: "モンテのむらのシャイン6枚" },
+      { name: "Sand Bird Shine", jp: "大砂鳥のシャインを取得" },
+      { name: "9 Delfino Shines", jp: "ドルピックタウンのシャイン9枚" },
+      { name: "ピアンタNPCからの5つのシャイン", jp: "モンテ族のNPCからシャイン5枚" },
+      { name: "Pinna 5 from the Back Hoverless", jp: "ピンナ5裏ルートホバー禁止" },
+    ],
+    [
+      { name: "5つの世界からの12枚の青いコイン", jp: "5ワールドから青コイン12枚" },
+      { name: "3レベルから20枚のブルーコイン", jp: "3レベルから青コイン20枚" },
+      { name: "60 Total Blue Coins", jp: "青コイン合計60枚" },
+      { name: "65 Total Blue Coins", jp: "青コイン合計65枚" },
+      { name: "70 Total Blue Coins", jp: "青コイン合計70枚" },
+      { name: "75 Total Blue Coins", jp: "青コイン合計75枚" },
+      { name: "80 Total Blue Coins", jp: "青コイン合計80枚" },
+    ],
+    [
+      { name: "NPCブルーコイン9枚", jp: "NPCブルーコイン9枚" },
+      { name: "30 Lives", jp: "残機30" },
+      { name: "35 Lives", jp: "残機35" },
+      { name: "23 Bianco Blue Coins", jp: "ビアンコヒルズの青コイン23枚" },
+      { name: "5 Secret Shines", jp: "ヒミツステージのシャイン5枚" },
+      { name: "6 Secret Shines", jp: "ヒミツステージのシャイン6枚" },
+      { name: "1 Pianta Hidden Shine", jp: "モンテのむらの隠しシャイン1枚" },
+    ],
+    [
+      { name: "Gelato Blue Coins 25枚", jp: "マンマビーチの青コイン25枚" },
+      { name: "Pianta Blue Coins 20枚", jp: "モンテのむらの青コイン20枚" },
+      { name: "Pianta Shadow Mario", jp: "モンテのむらのニセマリオ撃破" },
+      { name: "6 Boss Shines", jp: "ボス6体撃破" },
+      { name: "シレナブルーコイン20枚", jp: "シレナビーチの青コイン20枚" },
+      { name: "Ricco Shadow Mario", jp: "リコハーバーのニセマリオ撃破" },
+      { name: "Ricco 8 Shine", jp: "リコハーバーストーリー8" },
+    ],
+    [
+      { name: "ロケットノズル 3 個のロック解除", jp: "ロケットノズル 3 つ解放" },
+      { name: "12 Delfino Shines (With Blue Trades)", jp: "ドルピックタウンのシャイン12枚" },
+      { name: "15 Delfino Shines (With Blue Trades)", jp: "ドルピックタウンのシャイン15枚" },
+      { name: "6 Pinna Shines", jp: "ピンナパークのシャイン6枚" },
+      { name: "ビアンコ 8 シャイン", jp: "ビアンコヒルズストーリー8" },
+      { name: "グーパーブルーパーのボス3体全てを倒せ", jp: "ボスゲッソー3体撃破" },
+      { name: "Noki 100 Coin Shine", jp: "マーレのいりえの100枚コイン" },
+    ],
+    [
+      { name: "各レベルから1 Shine", jp: "各ステージからシャイン1枚ずつ" },
+      { name: "2 Bianco Hidden Shines", jp: "ビアンコヒルの隠しシャイン2枚" },
+      { name: "8 Shines Inside Secrets", jp: "ヒミツ内でシャイン8枚" },
+      { name: "2 Shines from 5 Levels", jp: "5ステージからシャイン2枚ずつ" },
+      { name: "2 ターボ ノズル ロック解除", jp: "ターボノズル 2 つ解放" },
+      { name: "7 Blue Bird Blue Coins", jp: "青い鳥の青コイン7枚" },
+      { name: "25 Pianta Blue Coins", jp: "モンテのむらの青コイン25枚" },
+    ],
+    [
+      { name: "2 Shadow Mario Shines", jp: "ニセマリオ２体撃破" },
+      { name: "Three 100 Coin Shines", jp: "100枚コインのシャイン3枚" },
+      { name: "2 ピアンティッシモ シャイン", jp: "モンテマンレース2つ" },
+      { name: "5 Shines from 3 Levels", jp: "3ステージからシャイン5枚ずつ" },
+      { name: "5 Sirena Shines", jp: "シレナビーチのシャイン5枚" },
+      { name: "6 Hidden Shines", jp: "隠しシャイン6枚" },
+      { name: "Pinna Shadow Mario", jp: "ピンナパークのニセマリオ撃破" },
+    ],
+    [
+      { name: "Pianta 8 Shine", jp: "モンテのむらストーリー8" },
+      { name: "4 Shines from 4 Levels", jp: "4ステージからシャイン4枚ずつ" },
+      { name: "9 Shines from 1 Level", jp: "1ステージからシャイン9枚取得" },
+      { name: "パイプを10個入れてシャインを集めよう", jp: "パイプ10個でシャイン集め" },
+      { name: "7つのパイプに入り、シャインを集めよう", jp: "パイプ7個でシャイン集め" },
+      { name: "4 ミニボスシャイン", jp: "ミニボスシャイン4体" },
+      { name: "Sirena 3 NO Clipping", jp: "シレナ3すり抜けバグ禁止" },
+    ],
+    [
+      { name: "Gelato Shadow Mario", jp: "マンマビーチのニセマリオ撃破" },
+      { name: "4 Red Coin Episode Shines", jp: "赤コインエピソードのシャイン4枚" },
+      { name: "7 Red Coin Shines", jp: "赤コインのシャイン7枚" },
+      { name: "ビアンコに乗ってヨッシー", jp: "ビアンコヒルのヨッシーに乗る" },
+      { name: "敵からの青コイン 9 枚", jp: "敵から青コイン 9 枚" },
+      { name: "両ベルシャイン", jp: "ベルのシャインを2枚取得" },
+      { name: "Lighthouse Shine", jp: "灯台のシャイン" },
+      { name: "スイレンのシャイン(切り抜きなし)", jp: "急流下りのシャイン取得" },
+    ],
+    [
+      { name: "2 Sirena Hidden Shines", jp: "シレナビーチの隠しシャイン2枚" },
+      { name: "2 Pinna Hidden Shines", jp: "ピンナパークの隠しシャイン2枚" },
+      { name: "30 Shines", jp: "シャイン30枚" },
+      { name: "4 Noki Shines", jp: "マーレのいりえのシャイン4枚" },
+      { name: "10 Shines from 1 Level", jp: "1ステージからシャイン10枚取得" },
+      { name: "27 Shines", jp: "シャイン27枚" },
+    ],
+    [
+      { name: "Pinna 8 Shine", jp: "ピンナパークストーリー8" },
+      { name: "キングブーシャイン", jp: "キングブーシャイン" },
+      { name: "2つのレベルから8つのシャイン", jp: "2レベルからシャイン8枚" },
+      { name: "2 Pianta Hidden Shines", jp: "モンテのむらの隠しシャイン2枚" },
+      { name: "Noki 2 Jumpless", jp: "マーレ2 ジャンプ禁止" },
+      { name: "All Sirena Casino Blues", jp: "シレナカジノの青コイン全部" },
+    ],
+    [
+      { name: "1レベルから2つのシークレットシャイン（ピンナなし）", jp: "1レベルからシークレットシャイン2枚" },
+      { name: "Sirena Shadow Mario", jp: "シレナビーチのニセマリオ撃破" },
+      { name: "ユニークレベルからの蝶の青いコイン2枚", jp: "蝶の青いコイン2枚" },
+      { name: "ヨッシーに乗って3つのレベルを駆け抜けよう", jp: "3レベルでヨッシーに乗ろう" },
+      { name: "3 Hidden Reds Hoverless", jp: "隠し赤コイン3枚 ホバー禁止" },
+      { name: "ビアンコシャドウマリオ", jp: "ビアンコヒルズのニセマリオ撃破" },
+      { name: "5 Unique Boss Shines", jp: "ボス5種類撃破" },
+    ],
+    [
+      { name: "Eel Shine", jp: "ウナギ撃破（マーレ4）" },
+      { name: "ジェラートに乗ってヨッシー", jp: "マンマビーチのヨッシーに乗る" },
+      { name: "4つのロケットノズルのロック解除", jp: "ロケットノズル4つ解放" },
+      { name: "Sirena 8 Shine", jp: "シレナビーチストーリー8" },
+      { name: "単一レベルの青コイン 30 枚すべて", jp: "1ステージから青コイン30枚取得" },
+      { name: "25 Noki Blue Coins", jp: "マーレのいりえの青コイン25枚" },
+      { name: "3 つのターボ ノズルのロック解除", jp: "ターボノズル3つ解放" },
+      { name: "8 Red Coin Shines", jp: "赤コインのシャイン8枚" },
+    ],
+  ];
+
+  const API = 'https://6a05e0376d3f2c74d06264f4.base44.app/functions/bingoRoom';
+
+  // 状態
+  let currentGroups = [];   // 今回の15グループ（各3択）
+  let selections = [];      // 選んだtask.name の配列（順番に積む）
+  let taskNameMap = {};     // name -> jp
+  let currentRoom = null;
+  let localChecked = [];
+  let pollInterval = null;
+
+  // ===== ユーティリティ =====
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // 残機系グループのインデックス（グループ9=idx8, グループ15=idx14）
+  const LIVES_GROUP_INDICES = [8, 14];
+
+  function pickGroups() {
+    // 残機グループを最大1つに制限
+    const livesGroups = shuffle(LIVES_GROUP_INDICES.map(i => ALL_TASK_GROUPS[i])).slice(0, 1);
+    const otherGroups = shuffle(ALL_TASK_GROUPS.filter((_, i) => !LIVES_GROUP_INDICES.includes(i)));
+    // 残機1つ + 他から14つ = 計15グループ
+    const combined = shuffle([...livesGroups, ...otherGroups.slice(0, 14)]);
+    return combined.map(g => shuffle(g).slice(0, 3));
+  }
+
+  // グループデータ → URLパラメータ（グループのインデックスと各3択のインデックスをエンコード）
+  function groupsToParam(groups) {
+    // 各グループについて、元の ALL_TASK_GROUPS のどのグループか + 選ばれた3つのインデックスを記録
+    const encoded = groups.map(group => {
+      // 元グループを特定
+      const srcIdx = ALL_TASK_GROUPS.findIndex(g => g.some(t => t.name === group[0].name));
+      const src = ALL_TASK_GROUPS[srcIdx];
+      const picks = group.map(t => src.findIndex(s => s.name === t.name));
+      return srcIdx + ':' + picks.join(',');
+    });
+    return encoded.join(';');
+  }
+
+  function paramToGroups(param) {
+    try {
+      return param.split(';').map(part => {
+        const [gi, picksStr] = part.split(':');
+        const src = ALL_TASK_GROUPS[+gi];
+        return picksStr.split(',').map(pi => src[+pi]);
+      });
+    } catch(e) { return null; }
+  }
+
+  async function api(body) {
+    try {
+      const res = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    } catch(e) { return { ok: false, error: e.message }; }
+  }
+
+  function showError(msg) { document.getElementById('error-msg').textContent = msg || ''; }
+
+  // ===== 初期化 =====
+  function init() {
+    const params = new URLSearchParams(window.location.search);
+    const gParam = params.get('g');
+    if (gParam) {
+      const groups = paramToGroups(gParam);
+      if (groups && groups.length === 15) {
+        currentGroups = groups;
+        buildTaskNameMap();
+        selections = [];
+        renderSelectStep();
+        return;
+      }
+    }
+    startNewGame();
+  }
+
+  function buildTaskNameMap() {
+    taskNameMap = {};
+    currentGroups.forEach(g => g.forEach(t => { taskNameMap[t.name] = t.jp; }));
+  }
+
+  // ===== 新しいチャレンジ =====
+  function startNewGame() {
+    if (pollInterval) clearInterval(pollInterval);
+    currentGroups = pickGroups();
+    buildTaskNameMap();
+    selections = [];
+    currentRoom = null;
+    localChecked = [];
+
+    // URLにグループ情報を乗せる
+    const url = new URL(window.location.href);
+    url.searchParams.set('g', groupsToParam(currentGroups));
+    url.searchParams.delete('room');
+    window.history.replaceState({}, '', url.toString());
+
+    renderSelectStep();
+  }
+
+  // ===== 選択画面（1ステップずつ） =====
+  function renderSelectStep() {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('play-screen').style.display = 'none';
+    document.getElementById('select-screen').style.display = 'block';
+
+    const stepIdx = selections.length; // 次に選ぶグループのインデックス
+    const screen = document.getElementById('select-screen');
+    screen.innerHTML = '';
+
+    // 新しいチャレンジボタン（選択画面の最初に表示）
+    const newGameBtn = document.createElement('button');
+    newGameBtn.className = 'new-game-btn';
+    newGameBtn.style.display = 'block';
+    newGameBtn.style.marginBottom = '16px';
+    newGameBtn.textContent = '🔀 新しいチャレンジを作る';
+    newGameBtn.onclick = startNewGame;
+    screen.appendChild(newGameBtn);
+
+    // ステップヘッダー
+    const header = document.createElement('div');
+    header.className = 'step-header';
+    header.innerHTML = `
+      <div class="step-label">お題選択</div>
+      <div class="step-count">${stepIdx} / 15 選択済み</div>
+      <div class="step-progress-wrap">
+        <div class="step-progress-bar" style="width:${stepIdx/15*100}%"></div>
+      </div>
+    `;
+    screen.appendChild(header);
+
+    // 共有URL（このURLを開けば同じ選択画面から始まる）
+    const shareArea = document.createElement('div');
+    shareArea.className = 'share-area';
+    const shareUrl = new URL(window.location.href);
+    shareUrl.searchParams.set('g', groupsToParam(currentGroups));
+    shareUrl.searchParams.delete('room');
+    shareArea.innerHTML = `
+      <p>🔗 このURLを共有すると同じお題セットで始められる</p>
+      <div class="share-box-sm">
+        <input type="text" id="share-url-input" readonly value="${shareUrl.toString()}">
+        <button class="copy-btn-sm" onclick="copyShareUrl()">コピー</button>
+      </div>
+    `;
+    screen.appendChild(shareArea);
+
+    if (stepIdx >= 15) {
+      // 全部選び終わった → スタートボタン
+      const startArea = document.createElement('div');
+      startArea.className = 'start-area';
+      startArea.innerHTML = `<button class="start-btn" onclick="launchGame()">🎮 スタート！</button>`;
+      screen.appendChild(startArea);
+      return;
+    }
+
+    // 現在のグループカード
+    const group = currentGroups[stepIdx];
+    const card = document.createElement('div');
+    card.className = 'group-card';
+    card.style.marginTop = '20px';
+
+    const q = document.createElement('div');
+    q.className = 'group-question';
+    q.textContent = `グループ ${stepIdx + 1} のお題を選んでください`;
+    card.appendChild(q);
+
+    const optList = document.createElement('div');
+    optList.className = 'options-list';
+    group.forEach(task => {
+      const btn = document.createElement('button');
+      btn.className = 'option-btn';
+      btn.textContent = task.jp;
+      btn.title = task.name;
+      btn.onclick = () => selectOption(task.name);
+      optList.appendChild(btn);
+    });
+    card.appendChild(optList);
+    screen.appendChild(card);
+
+    // 既に選んだ一覧（折りたたみ）
+    if (stepIdx > 0) {
+      const past = document.createElement('div');
+      past.style.cssText = 'margin-top:20px; opacity:0.55; font-size:0.78rem; text-align:center;';
+      past.textContent = `選択済み: ${selections.map((n,i) => `${i+1}.${taskNameMap[n]||n}`).join(' / ')}`;
+      screen.appendChild(past);
+    }
+  }
+
+  function selectOption(taskName) {
+    selections.push(taskName);
+    if (selections.length < 15) {
+      renderSelectStep();
+    } else {
+      // 全部選んだ
+      renderSelectStep(); // スタートボタンを表示
+    }
+  }
+
+  // ===== ゲーム起動 =====
+  async function launchGame() {
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('select-screen').style.display = 'none';
+    showError('');
+
+    const data = await api({ action: 'create', selected_tasks: selections });
+    if (data.ok) {
+      currentRoom = data.room;
+      renderPlay(data.room);
+    } else {
+      // オフラインフォールバック
+      document.getElementById('loading').style.display = 'none';
+      localChecked = new Array(15).fill(false);
+      renderPlayLocal();
+    }
+  }
+
+  // ===== プレイ画面（オンライン） =====
+  function renderPlay(room) {
+    currentRoom = room;
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('select-screen').style.display = 'none';
+    document.getElementById('play-screen').style.display = 'flex';
+
+    const done = room.checked.filter(Boolean).length;
+    document.getElementById('goal-count').textContent = `${done} / 15 完了`;
+    document.getElementById('goal-bar').style.width = (done / 15 * 100) + '%';
+    document.getElementById('goal-banner').style.display = done === 15 ? 'block' : 'none';
+
+    const grid = document.getElementById('task-grid');
+    grid.innerHTML = '';
+    room.card.forEach((taskName, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'task-cell' + (room.checked[i] ? ' done' : '');
+      cell.textContent = taskNameMap[taskName] || taskName;
+      cell.onclick = () => toggleTask(i);
+      grid.appendChild(cell);
+    });
+
+    startPolling(room.room_code);
+  }
+
+  // ===== プレイ画面（オフライン） =====
+  function renderPlayLocal() {
+    document.getElementById('play-screen').style.display = 'flex';
+    const done = localChecked.filter(Boolean).length;
+    document.getElementById('goal-count').textContent = `${done} / 15 完了`;
+    document.getElementById('goal-bar').style.width = (done / 15 * 100) + '%';
+    document.getElementById('goal-banner').style.display = done === 15 ? 'block' : 'none';
+
+    const grid = document.getElementById('task-grid');
+    grid.innerHTML = '';
+    selections.forEach((taskName, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'task-cell' + (localChecked[i] ? ' done' : '');
+      cell.textContent = taskNameMap[taskName] || taskName;
+      cell.onclick = () => {
+        localChecked[i] = !localChecked[i];
+        renderPlayLocal();
+      };
+      grid.appendChild(cell);
+    });
+  }
+
+  async function toggleTask(index) {
+    if (!currentRoom) return;
+    const data = await api({ action: 'toggle', room_code: currentRoom.room_code, index });
+    if (data.ok) renderPlay(data.room);
+  }
+
+  async function resetChecks() {
+    if (!currentRoom) {
+      localChecked = new Array(15).fill(false);
+      renderPlayLocal(); return;
+    }
+    for (let i = 0; i < 15; i++) {
+      if (currentRoom.checked[i]) await api({ action: 'toggle', room_code: currentRoom.room_code, index: i });
+    }
+    const data = await api({ action: 'get', room_code: currentRoom.room_code });
+    if (data.ok) renderPlay(data.room);
+  }
+
+  function startPolling(code) {
+    if (pollInterval) clearInterval(pollInterval);
+    pollInterval = setInterval(async () => {
+      const data = await api({ action: 'get', room_code: code });
+      if (data.ok) {
+        const prev = JSON.stringify(currentRoom.checked);
+        if (prev !== JSON.stringify(data.room.checked)) renderPlay(data.room);
+      }
+    }, 3000);
+  }
+
+  function copyShareUrl() {
+    const v = document.getElementById('share-url-input').value;
+    navigator.clipboard.writeText(v)
+      .then(() => alert('URLをコピーしました！🌊'))
+      .catch(() => { document.getElementById('share-url-input').select(); document.execCommand('copy'); alert('コピーしました！'); });
+  }
+
+  init();
+  </script>
+</body>
+</html>
